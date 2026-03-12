@@ -142,11 +142,10 @@ namespace http
                 // get + log request
                 std::string raw_request(buffer, bytes_read);
                 RequestParams rp(raw_request);
-                log("processed request:", static_cast<int>(rp.method), rp.path, rp.body);
-                log("end processed request");
+                log("raw request:", raw_request);
 
                 // get + log response
-                ResponseParams response(StatusCode::NOT_FOUND, "");
+                ResponseParams response(StatusCode::OK, "");
                 if (routes_.count(rp.path)) {
                     Handler handler = routes_[rp.path][static_cast<int>(rp.method)];
                     response = std::move(handler(rp));
@@ -156,9 +155,11 @@ namespace http
 
                 // write to client file descriptor
                 bytes_wrote = write(client_fd_, response.response.c_str(), response.response.size());
+                log("bytes written", bytes_wrote);
                 if (bytes_wrote == -1) {
                     exit_with_error("could not write");
                 }
+                close(client_fd_);
             }
         }
 
