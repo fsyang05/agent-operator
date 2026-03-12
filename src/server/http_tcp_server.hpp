@@ -39,11 +39,11 @@ namespace http
         std::string response;
     };
 
-    class TCPServer
-    {
     using Handler = std::function<ResponseParams(const RequestParams&)>;
     using HandlerArr = std::array<Handler, (size_t)Method::NUM_METHODS>;
 
+    class TCPServer
+    {
     public:
         TCPServer(const int& port);
         ~TCPServer();

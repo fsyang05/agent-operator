@@ -1,42 +1,51 @@
 #pragma once
+
 #include <string>
+#include <memory>
 #include <cstdlib>
 
-// from the hooks documentation
-// can be actively running,
-// waiting for some decision from the user,
-// completed its task,
-// etc.
-//
-// i think it is enough to just have:
-// idle
-// running
-// permission required
-// stopped (maybe don't even need this)
-enum class AgentState {
-    AGENT_RUNNING,
-    AGENT_IDLE,
-    AGENT_PERMISSION_REQUIRED,
-    AGENT_STOPPED
-};
+#include "tmux_session.hpp"
 
 /// An abstraction of a running Claude Code instance.
 /// Supports starting a new instance, ending an instance.
-class Agent
+namespace agent
 {
-public:
-    Agent(const std::string& agent_name)
-    : agent_name_(agent_name)
+
+    enum class AgentState {
+        AGENT_RUNNING,
+        AGENT_IDLE,
+        AGENT_PERMISSION_REQUIRED,
+        AGENT_STOPPED
+    };
+
+    constexpr const char* state_to_str(AgentState as)
     {
-        state_ = AgentState::AGENT_IDLE;
-        system(("claude --agent " + agent_name_).c_str());
+        switch (as) {
+            case AgentState::AGENT_RUNNING              :   return "RUNNING";
+            case AgentState::AGENT_IDLE                 :   return "IDLE";
+            case AgentState::AGENT_PERMISSION_REQUIRED  :   return "PERMISSION_REQUIRED";
+            case AgentState::AGENT_STOPPED              :   return "STOPPED";
+        }
+        return "UNKNOWN";
     }
 
-    ~Agent() {}
+    class Agent
+    {
+    public:
+        Agent(std::shared_ptr<TmuxSession> ts, const std::string& window_name, const std::string& agent_name);
+        ~Agent();
 
-private:
-    AgentState state_; // state transitions should be handled internally
-    std::string agent_name_; // start with claude --agent <name>
-    std::string session_id_; // lowkey probably won't use this then
-    std::string transcript_path_;
-};
+        AgentState state;
+        std::string agent_name;
+
+        void attach();
+        std::string get_preview();
+
+    private:
+        std::shared_ptr<TmuxSession> tmux_session_;
+        std::string session_id_;
+        std::string window_name_;
+        std::string transcript_path_;
+    };
+
+} // namespace agent

@@ -16,6 +16,12 @@ public:
     /// Creates window inside of session
     void create_window(const std::string& window_name);
 
+    /// Attaches to window by its name
+    void attach_window(const std::string& window_name);
+
+    /// Preview window using tmux's capture-pane, returns captured text
+    std::string preview_window(const std::string& window_name);
+
     /// Kills the window with given name
     void kill_window(const std::string& window_name);
 
@@ -27,4 +33,6 @@ private:
     std::set<std::string> window_names_;
     bool initialized_ = false;
     void ensure_session();
+    static std::string shell_quote(const std::string& s);
+    static std::string popen_read(const std::string& cmd);
 };
