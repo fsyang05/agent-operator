@@ -1,26 +1,18 @@
 #include <cstring>
 #include <unistd.h>
 #include <cerrno>
-#include <iostream>
 #include <sstream>
 #include <arpa/inet.h>
 #include <utility>
 
 #include "http_tcp_server.hpp"
+#include "util/logger.hpp"
 
 namespace
 {
-    template<typename... Args>
-    void log(const Args&... args)
-    {
-        // unary right fold over comma operator
-        // a1 op (a2 op (a3 op a4))
-        ((std::cout << args << ' '), ...) << std::endl;
-    }
-
     void exit_with_error(const std::string& error_msg)
     {
-        log("(ERROR):", error_msg, "errno:", strerror(errno));
+        LOG("(HTTP ERROR)", error_msg, "errno:", strerror(errno));
         exit(1);
     }
 
@@ -117,45 +109,28 @@ namespace http
             return -1;
         }
 
-        log("listening on addr",
-            inet_ntoa(addr_.sin_addr),
-            "on port",
-            ntohs(addr_.sin_port));
+        LOG("(HTTP) listening on port", ntohs(addr_.sin_port));
 
-        log("all registered routes:");
-        for (auto& it : routes_) {
-            log(it.first);
-        }
-
-        // we'd want to continually accept connections here
         char buffer[4096];
         ssize_t bytes_read, bytes_wrote;
         while (true) {
             if (accept_connection(client_fd_) == 0) {
-                log("connection accepted!");
-
                 bytes_read = read(client_fd_, buffer, sizeof(buffer));
                 if (bytes_read == -1) {
                     exit_with_error("could not read");
                 }
 
-                // get + log request
                 std::string raw_request(buffer, bytes_read);
                 RequestParams rp(raw_request);
-                log("raw request:", raw_request);
+                LOG("(HTTP)", rp.path);
 
-                // get + log response
                 ResponseParams response(StatusCode::OK, "");
                 if (routes_.count(rp.path)) {
                     Handler handler = routes_[rp.path][static_cast<int>(rp.method)];
-                    response = std::move(handler(rp));
+                    response = handler(rp);
                 }
-                log("processed response:", response.response);
-                log("end processed response");
 
-                // write to client file descriptor
                 bytes_wrote = write(client_fd_, response.response.c_str(), response.response.size());
-                log("bytes written", bytes_wrote);
                 if (bytes_wrote == -1) {
                     exit_with_error("could not write");
                 }

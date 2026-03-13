@@ -1,8 +1,11 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
+#include <thread>
 
 #include "agent.hpp"
+#include "handlers.hpp"
 #include "tmux_session.hpp"
+#include "server/http_tcp_server.hpp"
 #include "ui/components.hpp"
 #include "util/logger.hpp"
 
@@ -15,6 +18,38 @@ int main() {
     Logger::instance().set_logfile_dir("app.log");
 
     auto screen = ScreenInteractive::Fullscreen();
+
+    // HTTP server for Claude Code hook callbacks
+    http::TCPServer server(8080);
+
+    server.register_route("/hooks/notification", http::Method::POST,
+        [&](const http::RequestParams& req) -> http::ResponseParams {
+            auto sid = Handler::extract_session_id(req.body);
+            Handler::on_notification(sid);
+            screen.PostEvent(Event::Custom);
+            return http::ResponseParams(http::StatusCode::OK, "");
+        });
+
+    server.register_route("/hooks/stop", http::Method::POST,
+        [&](const http::RequestParams& req) -> http::ResponseParams {
+            auto sid = Handler::extract_session_id(req.body);
+            Handler::on_stop(sid);
+            screen.PostEvent(Event::Custom);
+            return http::ResponseParams(http::StatusCode::OK, "");
+        });
+
+    server.register_route("/hooks/user-prompt-submit", http::Method::POST,
+        [&](const http::RequestParams& req) -> http::ResponseParams {
+            auto sid = Handler::extract_session_id(req.body);
+            Handler::on_user_prompt_submit(sid);
+            screen.PostEvent(Event::Custom);
+            return http::ResponseParams(http::StatusCode::OK, "");
+        });
+
+    std::thread server_thread([&server] {
+        server.start_listen();
+    });
+    server_thread.detach();
 
     auto tmux = std::make_shared<TmuxSession>();
     std::vector<std::unique_ptr<Agent>> agents;
@@ -48,8 +83,20 @@ int main() {
         if (agents.empty()) return;
         int idx = selected_agent_index;
         if (idx >= 0 && idx < (int)agents.size()) {
+            Handler::remove_agent(*agents[idx]);
             agents.erase(agents.begin() + idx);
             agent_panel_build_container();
+        }
+    };
+
+    auto agent_start = [&] {
+        if (agents.empty()) return;
+        int idx = selected_agent_index;
+        if (idx >= 0 && idx < (int)agents.size()) {
+            auto& agent = *agents[idx];
+            if (agent.state != AgentState::AGENT_IDLE) return;
+            agent.start_claude();
+            Handler::register_agent(agent);
         }
     };
 
@@ -80,21 +127,30 @@ int main() {
             detail_panel_element = paragraph(preview_text) | flex;
         }
 
+        // help text with highlighted keys
+        auto help = hbox({
+            text("n") | bold | color(Color::Magenta), text(":spawn ") | dim,
+            text("s") | bold | color(Color::Magenta), text(":start ") | dim,
+            text("d") | bold | color(Color::Magenta), text(":kill ") | dim,
+            text("ret") | bold | color(Color::Magenta), text(":attach ") | dim,
+            text("q") | bold | color(Color::Magenta), text(":quit") | dim,
+        });
+
         // full layout
         return hbox({
             vbox({
-                text("Agents") | bold | center,
+                text("Agents") | bold | color(Color::Blue) | center,
                 separator(),
                 agent_panel_element | vscroll_indicator | yframe | flex,
                 separator(),
-                text("n:spawn d:kill enter:attach q:quit") | dim,
-            }) | border | size(WIDTH, EQUAL, 30),
+                help,
+            }) | borderStyled(Color::Blue) | size(WIDTH, EQUAL, 40),
 
             vbox({
-                text("Details") | bold | center,
+                text("Details") | bold | color(Color::Cyan) | center,
                 separator(),
                 detail_panel_element | flex,
-            }) | border | flex,
+            }) | borderStyled(Color::Cyan) | flex,
         });
     });
 
@@ -102,6 +158,7 @@ int main() {
 
     renderer = CatchEvent(renderer, [&](Event event) {
         if (event == Event::Character('n')) { agent_create(); return true; }
+        if (event == Event::Character('s')) { agent_start(); return true; }
         if (event == Event::Character('d')) { agent_kill(); return true; }
         if (event == Event::Character('q')) { screen.Exit(); return true; }
         if (event == Event::Return) {

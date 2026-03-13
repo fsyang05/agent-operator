@@ -121,6 +121,23 @@ void TmuxSession::kill_window(const std::string& window_name)
     LOG("(TMUX) killed window with name", window_name);
 }
 
+void TmuxSession::send_keys(const std::string& window_name, const std::string& keys)
+{
+    LOG("(TMUX) sending keys to window", window_name);
+
+    ensure_session();
+    if (!window_names_.count(window_name)) {
+        throw std::invalid_argument("No such window: " + window_name);
+    }
+    std::string cmd = "tmux send-keys -t " + shell_quote(session_name_ + ":" + window_name) + " " + shell_quote(keys) + " Enter";
+    int rc = system(cmd.c_str());
+    if (rc != 0) {
+        throw std::runtime_error("Failed to send keys to tmux window: " + window_name);
+    }
+
+    LOG("(TMUX) sent keys to window", window_name);
+}
+
 std::vector<std::string> TmuxSession::list_windows() const
 {
     return { window_names_.begin(), window_names_.end() };

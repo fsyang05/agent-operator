@@ -25,6 +25,9 @@ public:
     /// Kills the window with given name
     void kill_window(const std::string& window_name);
 
+    /// Send keys to a tmux window
+    void send_keys(const std::string& window_name, const std::string& keys);
+
     /// Get vector of all active window names in the session
     std::vector<std::string> list_windows() const;
 

@@ -3,6 +3,11 @@
 #include <string>
 #include <memory>
 #include <cstdlib>
+#include <random>
+#include <sstream>
+#include <iomanip>
+
+#include <ftxui/screen/color.hpp>
 
 #include "tmux_session.hpp"
 
@@ -29,6 +34,17 @@ namespace agent
         return "UNKNOWN";
     }
 
+    inline ftxui::Color state_to_color(AgentState as)
+    {
+        switch (as) {
+            case AgentState::AGENT_RUNNING              :   return ftxui::Color::Green;
+            case AgentState::AGENT_IDLE                 :   return ftxui::Color::Yellow;
+            case AgentState::AGENT_PERMISSION_REQUIRED  :   return ftxui::Color::Red;
+            case AgentState::AGENT_STOPPED              :   return ftxui::Color::GrayDark;
+        }
+        return ftxui::Color::White;
+    }
+
     class Agent
     {
     public:
@@ -40,6 +56,9 @@ namespace agent
 
         void attach();
         std::string get_preview();
+        void start_claude();
+        void stop_claude();
+        const std::string& session_id() const { return session_id_; }
 
     private:
         std::shared_ptr<TmuxSession> tmux_session_;

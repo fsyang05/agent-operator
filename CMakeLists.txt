@@ -16,7 +16,9 @@ FetchContent_MakeAvailable(ftxui)
 add_executable(run
     src/main.cpp
     src/agent.cpp
+    src/handlers.cpp
     src/tmux_session.cpp
+    src/server/http_tcp_server.cpp
     src/ui/agent_panel.cpp
 )
 
