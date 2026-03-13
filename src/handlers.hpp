@@ -1,9 +1,9 @@
 #pragma once
 #include <string>
 #include <unordered_map>
-#include "agent.hpp"
+#include "model/agent.hpp"
 
-namespace Handler {
+namespace HTTPHandlers {
     // session_id -> Agent* mapping (non-owning)
     extern std::unordered_map<std::string, agent::Agent*> session_agent_map;
 

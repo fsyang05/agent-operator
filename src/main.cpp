@@ -1,16 +1,31 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
-#include <thread>
 
-#include "agent.hpp"
-#include "handlers.hpp"
-#include "tmux_session.hpp"
+#include "model/agent.hpp"
+#include "model/tmux_session.hpp"
+#include "router.cpp"
 #include "server/http_tcp_server.hpp"
 #include "ui/components.hpp"
 #include "util/logger.hpp"
 
 using namespace ftxui;
 using namespace agent;
+
+namespace {
+
+    void register_agent(agent::Agent& agent)
+    {
+        HTTPHandlers::session_agent_map[agent.session_id()] = &agent;
+        LOG("(HANDLER) registered session", agent.session_id(), "for agent", agent.agent_name);
+    }
+
+    void remove_agent(agent::Agent& agent)
+    {
+        HTTPHandlers::session_agent_map.erase(agent.session_id());
+        LOG("(HANDLER) removed agent from session map", agent.agent_name);
+    }
+
+}
 
 int main() {
   try {
@@ -20,36 +35,7 @@ int main() {
     auto screen = ScreenInteractive::Fullscreen();
 
     // HTTP server for Claude Code hook callbacks
-    http::TCPServer server(8080);
-
-    server.register_route("/hooks/notification", http::Method::POST,
-        [&](const http::RequestParams& req) -> http::ResponseParams {
-            auto sid = Handler::extract_session_id(req.body);
-            Handler::on_notification(sid);
-            screen.PostEvent(Event::Custom);
-            return http::ResponseParams(http::StatusCode::OK, "");
-        });
-
-    server.register_route("/hooks/stop", http::Method::POST,
-        [&](const http::RequestParams& req) -> http::ResponseParams {
-            auto sid = Handler::extract_session_id(req.body);
-            Handler::on_stop(sid);
-            screen.PostEvent(Event::Custom);
-            return http::ResponseParams(http::StatusCode::OK, "");
-        });
-
-    server.register_route("/hooks/user-prompt-submit", http::Method::POST,
-        [&](const http::RequestParams& req) -> http::ResponseParams {
-            auto sid = Handler::extract_session_id(req.body);
-            Handler::on_user_prompt_submit(sid);
-            screen.PostEvent(Event::Custom);
-            return http::ResponseParams(http::StatusCode::OK, "");
-        });
-
-    std::thread server_thread([&server] {
-        server.start_listen();
-    });
-    server_thread.detach();
+    http::TCPServer server = start_server(screen, 8080);
 
     auto tmux = std::make_shared<TmuxSession>();
     std::vector<std::unique_ptr<Agent>> agents;
@@ -83,7 +69,7 @@ int main() {
         if (agents.empty()) return;
         int idx = selected_agent_index;
         if (idx >= 0 && idx < (int)agents.size()) {
-            Handler::remove_agent(*agents[idx]);
+            remove_agent(*agents[idx]);
             agents.erase(agents.begin() + idx);
             agent_panel_build_container();
         }
@@ -96,7 +82,7 @@ int main() {
             auto& agent = *agents[idx];
             if (agent.state != AgentState::AGENT_IDLE) return;
             agent.start_claude();
-            Handler::register_agent(agent);
+            register_agent(agent);
         }
     };
 

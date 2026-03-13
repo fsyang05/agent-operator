@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ftxui/component/component.hpp>
-#include "agent.hpp"
+#include "model/agent.hpp"
 
 using namespace ftxui;
 using namespace agent;

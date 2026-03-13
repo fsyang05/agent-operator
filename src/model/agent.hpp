@@ -3,9 +3,6 @@
 #include <string>
 #include <memory>
 #include <cstdlib>
-#include <random>
-#include <sstream>
-#include <iomanip>
 
 #include <ftxui/screen/color.hpp>
 
