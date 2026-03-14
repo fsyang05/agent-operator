@@ -72,7 +72,6 @@ namespace agent
         session_id_ = generate_uuid();
         std::string cmd = "claude --session-id " + session_id_;
         tmux_session_->send_keys(window_name_, cmd);
-        state = AgentState::AGENT_RUNNING;
         LOG("(AGENT) started claude for agent", agent_name, "session_id", session_id_);
     }
 

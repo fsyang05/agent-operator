@@ -1,3 +1,6 @@
+#include <atomic>
+#include <thread>
+
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 
@@ -86,7 +89,74 @@ int main() {
         }
     };
 
+    bool grid_mode = false;
+    std::atomic<bool> grid_polling{false};
+
     auto renderer = Renderer(agent_panel_container, [&] {
+        // help text with highlighted keys
+        auto help = hbox({
+            text("n") | bold | color(Color::BlueLight), text(":spawn ") | dim,
+            text("s") | bold | color(Color::BlueLight), text(":start ") | dim,
+            text("d") | bold | color(Color::BlueLight), text(":kill ") | dim,
+            text("ret") | bold | color(Color::BlueLight), text(":attach ") | dim,
+            text("g") | bold | color(Color::BlueLight), text(":grid ") | dim,
+            text("q") | bold | color(Color::BlueLight), text(":quit") | dim,
+        });
+
+        if (grid_mode) {
+            // Grid view
+            constexpr int cols = 3;
+            int n = (int)agents.size();
+
+            Element grid_content;
+            if (n == 0) {
+                grid_content = text("No agents") | dim | center | flex;
+            } else {
+                std::vector<Elements> rows;
+                Elements current_row;
+                for (int i = 0; i < n; i++) {
+                    auto& a = *agents[i];
+                    Color sc = state_to_color(a.state);
+                    std::string preview = a.get_preview();
+
+                    auto cell = vbox({
+                        hbox({
+                            text(a.agent_name) | bold,
+                            text(" "),
+                            text(state_to_str(a.state)) | color(sc) | bold,
+                        }),
+                        separator(),
+                        paragraph(preview) | flex,
+                    }) | borderStyled(sc) | flex;
+
+                    current_row.push_back(cell);
+                    if ((int)current_row.size() == cols) {
+                        rows.push_back(std::move(current_row));
+                        current_row.clear();
+                    }
+                }
+                // pad last row
+                while ((int)current_row.size() < cols) {
+                    current_row.push_back(filler());
+                }
+                if (!current_row.empty()) {
+                    rows.push_back(std::move(current_row));
+                }
+
+                Elements vrows;
+                for (auto& row : rows) {
+                    vrows.push_back(hbox(std::move(row)));
+                }
+                grid_content = vbox(std::move(vrows)) | flex;
+            }
+
+            return vbox({
+                grid_content | flex,
+                help,
+            }) | border;
+        }
+
+        // Normal view
         // left panel
         Element agent_panel_element;
         if (agents.empty()) {
@@ -113,36 +183,46 @@ int main() {
             detail_panel_element = paragraph(preview_text) | flex;
         }
 
-        // help text with highlighted keys
-        auto help = hbox({
-            text("n") | bold | color(Color::Magenta), text(":spawn ") | dim,
-            text("s") | bold | color(Color::Magenta), text(":start ") | dim,
-            text("d") | bold | color(Color::Magenta), text(":kill ") | dim,
-            text("ret") | bold | color(Color::Magenta), text(":attach ") | dim,
-            text("q") | bold | color(Color::Magenta), text(":quit") | dim,
-        });
-
         // full layout
-        return hbox({
-            vbox({
-                text("Agents") | bold | color(Color::Blue) | center,
-                separator(),
-                agent_panel_element | vscroll_indicator | yframe | flex,
-                separator(),
-                help,
-            }) | borderStyled(Color::Blue) | size(WIDTH, EQUAL, 40),
+        return vbox({
+            hbox({
+                vbox({
+                    agent_panel_element | vscroll_indicator | yframe | flex,
+                }) | borderStyled(Color::Blue) | size(WIDTH, EQUAL, 40),
 
-            vbox({
-                text("Details") | bold | color(Color::Cyan) | center,
-                separator(),
-                detail_panel_element | flex,
-            }) | borderStyled(Color::Cyan) | flex,
+                vbox({
+                    detail_panel_element | flex,
+                }) | borderStyled(Color::Cyan) | flex,
+            }) | flex,
+            help,
         });
     });
 
     bool attach_requested = false;
 
     renderer = CatchEvent(renderer, [&](Event event) {
+        if (event == Event::Character('g')) {
+            grid_mode = !grid_mode;
+            if (grid_mode) {
+                grid_polling = true;
+                std::thread([&] {
+                    while (grid_polling) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                        if (grid_polling) {
+                            screen.PostEvent(Event::Custom);
+                        }
+                    }
+                }).detach();
+            } else {
+                grid_polling = false;
+            }
+            return true;
+        }
+        if (event == Event::Escape && grid_mode) {
+            grid_mode = false;
+            grid_polling = false;
+            return true;
+        }
         if (event == Event::Character('n')) { agent_create(); return true; }
         if (event == Event::Character('s')) { agent_start(); return true; }
         if (event == Event::Character('d')) { agent_kill(); return true; }
@@ -167,6 +247,7 @@ int main() {
             running = false;
         }
     }
+    grid_polling = false;
   } catch (const std::exception& e) {
     LOG("(MAIN) fatal exception:", e.what());
     return 1;
