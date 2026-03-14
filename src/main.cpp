@@ -8,6 +8,7 @@
 #include "model/tmux_session.hpp"
 #include "router.cpp"
 #include "server/http_tcp_server.hpp"
+#include "ui/ansi_parser.hpp"
 #include "ui/components.hpp"
 #include "util/logger.hpp"
 
@@ -48,7 +49,6 @@ int main() {
     auto agent_panel_container = Container::Vertical({}, &selected_agent_index);
 
     std::string preview_text;
-    int prev_selected_index = -1;
     Component preview_component = Renderer([&] {
         return text("No agent selected") | dim | center;
     });
@@ -90,7 +90,6 @@ int main() {
     };
 
     bool grid_mode = false;
-    std::atomic<bool> grid_polling{false};
 
     auto renderer = Renderer(agent_panel_container, [&] {
         // help text with highlighted keys
@@ -112,7 +111,7 @@ int main() {
             if (n == 0) {
                 grid_content = text("No agents") | dim | center | flex;
             } else {
-                std::vector<Elements> rows;
+                std::vector<Elements> grid_rows;
                 Elements current_row;
                 for (int i = 0; i < n; i++) {
                     auto& a = *agents[i];
@@ -126,34 +125,29 @@ int main() {
                             text(state_to_str(a.state)) | color(sc) | bold,
                         }),
                         separator(),
-                        paragraph(preview) | flex,
+                        ansi::ansi_to_element(preview) | flex,
                     }) | borderStyled(sc) | flex;
 
                     current_row.push_back(cell);
                     if ((int)current_row.size() == cols) {
-                        rows.push_back(std::move(current_row));
+                        grid_rows.push_back(std::move(current_row));
                         current_row.clear();
                     }
                 }
-                // pad last row
+                // pad last row with empty flex cells
                 while ((int)current_row.size() < cols) {
-                    current_row.push_back(filler());
+                    current_row.push_back(vbox({}) | flex);
                 }
                 if (!current_row.empty()) {
-                    rows.push_back(std::move(current_row));
+                    grid_rows.push_back(std::move(current_row));
                 }
-
-                Elements vrows;
-                for (auto& row : rows) {
-                    vrows.push_back(hbox(std::move(row)));
-                }
-                grid_content = vbox(std::move(vrows)) | flex;
+                grid_content = gridbox(std::move(grid_rows)) | flex;
             }
 
             return vbox({
                 grid_content | flex,
                 help,
-            }) | border;
+            });
         }
 
         // Normal view
@@ -165,14 +159,11 @@ int main() {
             agent_panel_element = agent_panel_container->Render();
         }
 
-        // right panel — rebuild preview when selection changes
-        if (!agents.empty() && selected_agent_index != prev_selected_index) {
-            prev_selected_index = selected_agent_index;
+        // right panel — always refresh preview for live updates
+        if (!agents.empty()) {
             int idx = std::clamp(selected_agent_index, 0, (int)agents.size() - 1);
             preview_text = agents[idx]->get_preview();
-        }
-        if (agents.empty()) {
-            prev_selected_index = -1;
+        } else {
             preview_text.clear();
         }
 
@@ -180,7 +171,7 @@ int main() {
         if (agents.empty() || preview_text.empty()) {
             detail_panel_element = text("No agent selected") | dim | center;
         } else {
-            detail_panel_element = paragraph(preview_text) | flex;
+            detail_panel_element = ansi::ansi_to_element(preview_text) | flex;
         }
 
         // full layout
@@ -203,24 +194,10 @@ int main() {
     renderer = CatchEvent(renderer, [&](Event event) {
         if (event == Event::Character('g')) {
             grid_mode = !grid_mode;
-            if (grid_mode) {
-                grid_polling = true;
-                std::thread([&] {
-                    while (grid_polling) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                        if (grid_polling) {
-                            screen.PostEvent(Event::Custom);
-                        }
-                    }
-                }).detach();
-            } else {
-                grid_polling = false;
-            }
             return true;
         }
         if (event == Event::Escape && grid_mode) {
             grid_mode = false;
-            grid_polling = false;
             return true;
         }
         if (event == Event::Character('n')) { agent_create(); return true; }
@@ -237,6 +214,14 @@ int main() {
         return false;
     });
 
+    std::atomic<bool> app_running{true};
+    std::thread([&] {
+        while (app_running) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            if (app_running) screen.PostEvent(Event::Custom);
+        }
+    }).detach();
+
     bool running = true;
     while (running) {
         screen.Loop(renderer);
@@ -247,7 +232,7 @@ int main() {
             running = false;
         }
     }
-    grid_polling = false;
+    app_running = false;
   } catch (const std::exception& e) {
     LOG("(MAIN) fatal exception:", e.what());
     return 1;

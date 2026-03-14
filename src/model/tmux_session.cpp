@@ -96,7 +96,7 @@ std::string TmuxSession::preview_window(const std::string& window_name)
         throw std::invalid_argument("Window with window_name: " + window_name + " doesn't exist");
     }
     // tmux capture-pane -t session_name:window_name -p
-    std::string cmd = "tmux capture-pane -t " + shell_quote(session_name_ + ":" + window_name) + " -p";
+    std::string cmd = "tmux capture-pane -t " + shell_quote(session_name_ + ":" + window_name) + " -p -e";
 
     LOG("(TMUX) previewed window with name", window_name);
     return popen_read(cmd);
