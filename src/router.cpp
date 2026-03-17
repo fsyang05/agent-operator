@@ -2,8 +2,8 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <thread>
 
+#include "router.hpp"
 #include "handlers.hpp"
-#include "server/http_tcp_server.hpp"
 
 using namespace http;
 
@@ -26,7 +26,7 @@ namespace {
     }
 }
 
-TCPServer start_server(ftxui::ScreenInteractive& screen, int port)
+TCPServer start_server(ftxui::ScreenInteractive& screen, Port port)
 {
     TCPServer server(port);
 
