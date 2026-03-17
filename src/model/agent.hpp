@@ -1,26 +1,21 @@
 #pragma once
 
 #include <string>
-#include <memory>
-#include <cstdlib>
 
-#include <ftxui/screen/color.hpp>
+#include "util/logger.hpp"
 
-#include "tmux_session.hpp"
-
-/// An abstraction of a running Claude Code instance.
-/// Supports starting a new instance, ending an instance.
 namespace agent
 {
 
-    enum class AgentState {
+    enum class AgentState
+    {
         AGENT_RUNNING,
         AGENT_IDLE,
         AGENT_PERMISSION_REQUIRED,
         AGENT_STOPPED
     };
 
-    constexpr const char* state_to_str(AgentState as)
+    inline std::string state_to_str(const AgentState as)
     {
         switch (as) {
             case AgentState::AGENT_RUNNING              :   return "RUNNING";
@@ -31,37 +26,28 @@ namespace agent
         return "UNKNOWN";
     }
 
-    inline ftxui::Color state_to_color(AgentState as)
-    {
-        switch (as) {
-            case AgentState::AGENT_RUNNING              :   return ftxui::Color::Green;
-            case AgentState::AGENT_IDLE                 :   return ftxui::Color::Yellow;
-            case AgentState::AGENT_PERMISSION_REQUIRED  :   return ftxui::Color::Red;
-            case AgentState::AGENT_STOPPED              :   return ftxui::Color::GrayDark;
-        }
-        return ftxui::Color::White;
-    }
-
+    using SessionId = std::string;
     class Agent
     {
     public:
-        Agent(std::shared_ptr<TmuxSession> ts, const std::string& window_name, const std::string& agent_name);
-        ~Agent();
+        /// be careful that this uses move
+        Agent(const std::string& name, const SessionId& sid)
+        : name_{ std::move(name) }, session_id_{ std::move(sid) } {}
 
-        AgentState state;
-        std::string agent_name;
+        ~Agent()
+        {
+            LOG("(AGENT) destroying window for agent", name_);
+        }
 
-        void attach();
-        std::string get_preview();
-        void start_claude();
-        void stop_claude();
-        const std::string& session_id() const { return session_id_; }
+        const SessionId& session_id() const { return session_id_; }
+        const std::string& name() const { return name_; }
+        const AgentState& agent_state() const { return state_; }
+        void change_state(const AgentState as) { state_ = as; }
 
     private:
-        std::shared_ptr<TmuxSession> tmux_session_;
-        std::string session_id_;
-        std::string window_name_;
-        std::string transcript_path_;
+        AgentState state_;
+        std::string name_;
+        SessionId session_id_;
     };
 
 } // namespace agent

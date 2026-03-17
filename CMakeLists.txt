@@ -15,11 +15,9 @@ FetchContent_MakeAvailable(ftxui)
 
 add_executable(run
     src/main.cpp
-    src/model/agent.cpp
-    src/handlers.cpp
+    src/app.cpp
     src/model/tmux_session.cpp
     src/server/http_tcp_server.cpp
-    src/ui/agent_panel.cpp
 )
 
 target_include_directories(run PRIVATE ${CMAKE_SOURCE_DIR}/src)

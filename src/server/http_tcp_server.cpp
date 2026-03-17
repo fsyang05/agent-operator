@@ -6,16 +6,11 @@
 #include <utility>
 
 #include "http_tcp_server.hpp"
+
 #include "util/logger.hpp"
 
 namespace
 {
-    void exit_with_error(const std::string& error_msg)
-    {
-        LOG("(HTTP ERROR)", error_msg, "errno:", strerror(errno));
-        exit(1);
-    }
-
     constexpr std::pair<std::string_view, http::Method> method_map[] = {
         { "GET",    http::Method::GET },
         { "POST",   http::Method::POST },
@@ -61,7 +56,7 @@ namespace http
     TCPServer::TCPServer(const int& port)
     {
         port_ = port;
-        start_server();
+        start_server(); // caller needs to handle exceptions!!
     }
 
     TCPServer::~TCPServer()
@@ -74,8 +69,7 @@ namespace http
         // create socket
         socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
         if (socket_fd_ == -1) {
-            exit_with_error("socket not created");
-            return -1;
+            throw std::runtime_error("Socket could not be created");
         }
 
         // bind socket to a port
@@ -85,8 +79,7 @@ namespace http
         addr_.sin_addr.s_addr   = INADDR_ANY;
 
         if (bind(socket_fd_, (sockaddr*)&addr_, sizeof(addr_)) == -1) {
-            exit_with_error("unable to bind for some reason");
-            return -1;
+            throw std::runtime_error("Socket could not be binded");
         }
 
         return 0;
@@ -105,8 +98,7 @@ namespace http
     int TCPServer::start_listen()
     {
         if (listen(socket_fd_, 128) == -1) {
-            exit_with_error("socket cannot start listening");
-            return -1;
+            throw std::runtime_error("Socket couldn't start listening");
         }
 
         LOG("(HTTP) listening on port", ntohs(addr_.sin_port));
@@ -117,7 +109,7 @@ namespace http
             if (accept_connection(client_fd_) == 0) {
                 bytes_read = read(client_fd_, buffer, sizeof(buffer));
                 if (bytes_read == -1) {
-                    exit_with_error("could not read");
+                    throw std::runtime_error("Could not read from connection");
                 }
 
                 std::string raw_request(buffer, bytes_read);
@@ -132,7 +124,7 @@ namespace http
 
                 bytes_wrote = write(client_fd_, response.response.c_str(), response.response.size());
                 if (bytes_wrote == -1) {
-                    exit_with_error("could not write");
+                    throw std::runtime_error("Could not write to connection");
                 }
                 close(client_fd_);
             }
@@ -146,21 +138,20 @@ namespace http
         // we don't really care about what the client gives us
         new_socket_fd = accept(socket_fd_, nullptr, nullptr);
         if (new_socket_fd == -1) {
-            exit_with_error("connection could not be accepted");
-            return -1;
+            throw std::runtime_error("Could not accept connection");
         }
         return 0;
     }
 
     void TCPServer::close_server()
     {
-        if (close(socket_fd_) == -1) {
-            exit_with_error("failed to close socket");
-            return;
+        int our_socket = close(socket_fd_);
+        int client_socket = close(client_fd_);
+        if (our_socket == -1) {
+            throw std::runtime_error("Could not close our socket");
         }
-        if (close(client_fd_) == -1) {
-            exit_with_error("failed to close socket");
-            return;
+        if (client_socket == -1) {
+            throw std::runtime_error("Could not close client's socket");
         }
     }
 

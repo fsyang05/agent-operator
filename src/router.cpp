@@ -1,9 +1,8 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
-#include <thread>
 
+#include "router.hpp"
 #include "handlers.hpp"
-#include "server/http_tcp_server.hpp"
 
 using namespace http;
 
@@ -26,14 +25,12 @@ namespace {
     }
 }
 
-TCPServer start_server(ftxui::ScreenInteractive& screen, int port)
+void config_server(TCPServer& server, ftxui::ScreenInteractive& screen)
 {
-    TCPServer server(port);
-
     server.register_route("/hooks/notification", Method::POST,
         [&](const RequestParams& req) -> ResponseParams {
             auto sid = extract_session_id(req.body);
-            HTTPHandlers::on_notification(sid);
+            RouteHandler::on_notification(sid);
             screen.PostEvent(ftxui::Event::Custom);
             return ResponseParams(StatusCode::OK, "");
         });
@@ -41,7 +38,7 @@ TCPServer start_server(ftxui::ScreenInteractive& screen, int port)
     server.register_route("/hooks/stop", Method::POST,
         [&](const RequestParams& req) -> ResponseParams {
             auto sid = extract_session_id(req.body);
-            HTTPHandlers::on_stop(sid);
+            RouteHandler::on_stop(sid);
             screen.PostEvent(ftxui::Event::Custom);
             return ResponseParams(StatusCode::OK, "");
         });
@@ -49,15 +46,8 @@ TCPServer start_server(ftxui::ScreenInteractive& screen, int port)
     server.register_route("/hooks/user-prompt-submit", Method::POST,
         [&](const RequestParams& req) -> ResponseParams {
             auto sid = extract_session_id(req.body);
-            HTTPHandlers::on_user_prompt_submit(sid);
+            RouteHandler::on_user_prompt_submit(sid);
             screen.PostEvent(ftxui::Event::Custom);
             return ResponseParams(StatusCode::OK, "");
         });
-
-    std::thread server_thread([&server] {
-        server.start_listen();
-    });
-    server_thread.detach();
-
-    return server;
 }
