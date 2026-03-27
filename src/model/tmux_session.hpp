@@ -4,6 +4,9 @@
 #include <vector>
 #include <set>
 
+namespace Tmux
+{
+
 class TmuxSession
 {
     public:
@@ -27,3 +30,5 @@ class TmuxSession
         static std::string shell_quote(const std::string& s);
         static std::string popen_read(const std::string& cmd);
 };
+
+} // namespace Tmux

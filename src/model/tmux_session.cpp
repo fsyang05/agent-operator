@@ -7,6 +7,9 @@
 #include "tmux_session.hpp"
 #include "util/logger.hpp"
 
+namespace Tmux
+{
+
 std::string TmuxSession::shell_quote(const std::string& s)
 {
     std::string result = "'";
@@ -143,3 +146,5 @@ std::vector<std::string> TmuxSession::list_windows() const
 {
     return { window_names_.begin(), window_names_.end() };
 }
+
+} // namespace Tmux

@@ -18,7 +18,7 @@ class App
 {
 public:
     App()
-    : tmux_{ std::make_unique<TmuxSession>() }
+    : tmux_{ std::make_unique<Tmux::TmuxSession>() }
     {}
 
     std::atomic<bool> running;
@@ -42,7 +42,7 @@ public:
 private:
     int selected_idx_;
 
-    std::unique_ptr<TmuxSession> tmux_;
+    std::unique_ptr<Tmux::TmuxSession> tmux_;
 
     std::mutex mutex_;
 
