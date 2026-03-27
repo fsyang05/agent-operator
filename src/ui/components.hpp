@@ -25,7 +25,7 @@ inline Component AgentPanel(const agent::Agent& agent)
     return Renderer([&](bool focused) {
         Color state_color = state_to_color(agent.agent_state());
         auto element = hbox({
-                text(agent.agent_name()),
+                text(agent.name()),
                 filler(),
                 text(state_to_str(agent.agent_state())) | color(state_color) | bold,
                 });
