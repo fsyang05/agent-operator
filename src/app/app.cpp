@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <random>
 #include <sstream>
 #include <iomanip>
@@ -94,10 +95,11 @@ void App::handle_tui_event(const TUIEvent& e)
 
 void App::handle_server_event(const ServerEvent& e)
 {
-    auto it = session_map_.find(e.session_id);
-    if (it == session_map_.end()) return;
+    auto it = std::find_if(agents_.begin(), agents_.end(),
+        [&](const auto& a) { return a->session_id() == e.session_id; });
+    if (it == agents_.end()) return;
 
-    auto* ag = it->second;
+    auto* ag = it->get();
     switch (e.type) {
         case ServerEventType::Notification:
             ag->change_state(agent::AgentState::AGENT_PERMISSION_REQUIRED);
@@ -126,7 +128,6 @@ void App::delete_agent(int idx)
     if (idx < 0 || idx >= static_cast<int>(agents_.size())) return;
 
     auto& ag = agents_[idx];
-    session_map_.erase(ag->session_id());
     tmux_->kill_window(ag->name());
     LOG("(APP) deleted agent", ag->name());
     agents_.erase(agents_.begin() + idx);
@@ -141,7 +142,6 @@ void App::start_agent(int idx)
 
     tmux_->send_keys(ag->name(), "claude\n");
     ag->change_state(agent::AgentState::AGENT_RUNNING);
-    session_map_[ag->session_id()] = ag.get();
     LOG("(APP) started agent", ag->name(), "session", ag->session_id());
 }
 

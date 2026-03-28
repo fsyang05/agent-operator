@@ -3,7 +3,6 @@
 #include <atomic>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "app/event.hpp"
@@ -40,7 +39,6 @@ public:
 private:
     std::unique_ptr<Tmux::TmuxSession> tmux_;
     std::vector<std::unique_ptr<agent::Agent>> agents_;
-    std::unordered_map<std::string, agent::Agent*> session_map_;
     int next_agent_id_ = 0;
     std::atomic<bool> running_{ true };
 
