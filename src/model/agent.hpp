@@ -30,24 +30,30 @@ namespace agent
     class Agent
     {
     public:
-        /// be careful that this uses move
-        Agent(const std::string& name, const SessionId& sid)
-        : name_{ std::move(name) }, session_id_{ std::move(sid) } {}
+        Agent(std::string name, SessionId sid)
+        : state_{ AgentState::AGENT_IDLE }
+        , name_{ std::move(name) }
+        , session_id_{ std::move(sid) }
+        {}
 
         ~Agent()
         {
-            LOG("(AGENT) destroying window for agent", name_);
+            LOG("(AGENT) destroying agent", name_);
         }
 
         const SessionId& session_id() const { return session_id_; }
         const std::string& name() const { return name_; }
-        const AgentState& agent_state() const { return state_; }
-        void change_state(const AgentState as) { state_ = as; }
+        AgentState agent_state() const { return state_; }
+        void change_state(AgentState as) { state_ = as; }
+
+        const std::string& preview() const { return preview_; }
+        void set_preview(std::string p) { preview_ = std::move(p); }
 
     private:
         AgentState state_;
         std::string name_;
         SessionId session_id_;
+        std::string preview_;
     };
 
 } // namespace agent

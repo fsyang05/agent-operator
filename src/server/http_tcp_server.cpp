@@ -53,7 +53,7 @@ namespace http
                     + body;
     }
 
-    TCPServer::TCPServer(const int& port)
+    TCPServer::TCPServer(unsigned int port)
     {
         port_ = port;
         start_server(); // caller needs to handle exceptions!!
