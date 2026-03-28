@@ -13,6 +13,12 @@ FetchContent_Declare(ftxui
 )
 FetchContent_MakeAvailable(ftxui)
 
+# nlohmann/json
+FetchContent_Declare(json
+  URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+)
+FetchContent_MakeAvailable(json)
+
 add_executable(run
     src/main.cpp
     src/app.cpp
@@ -34,4 +40,5 @@ target_link_libraries(run
   PRIVATE ftxui::screen
   PRIVATE ftxui::dom
   PRIVATE ftxui::component
+  PRIVATE nlohmann_json::nlohmann_json
 )
