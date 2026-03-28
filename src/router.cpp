@@ -1,27 +1,22 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
+#include <nlohmann/json.hpp>
 
 #include "router.hpp"
 #include "handlers.hpp"
 
 using namespace http;
+using json = nlohmann::json;
 
 namespace {
     std::string extract_session_id(const std::string& body)
     {
-        std::string key = "\"session_id\":\"";
-        auto pos = body.find(key);
-        if (pos == std::string::npos) {
-            // try with space after colon
-            key = "\"session_id\": \"";
-            pos = body.find(key);
+        try {
+            auto j = json::parse(body);
+            return j.at("session_id").get<std::string>();
+        } catch (const json::exception&) {
+            return "";
         }
-        if (pos == std::string::npos) return "";
-
-        auto start = pos + key.size();
-        auto end = body.find('"', start);
-        if (end == std::string::npos) return "";
-        return body.substr(start, end - start);
     }
 }
 
