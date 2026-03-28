@@ -45,7 +45,7 @@ namespace http
     class TCPServer
     {
     public:
-        TCPServer(const int& port);
+        TCPServer(unsigned int port);
         ~TCPServer();
         void register_route(const std::string& path, Method method, Handler handler);
         int start_listen();
@@ -57,7 +57,7 @@ namespace http
         std::map<std::string, HandlerArr> routes_;
         int socket_fd_;
         int client_fd_;
-        int port_;
+        unsigned int port_;
         sockaddr_in addr_;
         int start_server();
         int accept_connection(int& new_socket_fd);

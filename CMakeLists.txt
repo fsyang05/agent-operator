@@ -21,7 +21,9 @@ FetchContent_MakeAvailable(json)
 
 add_executable(run
     src/main.cpp
-    src/app.cpp
+    src/app/app.cpp
+    src/app/router.cpp
+    src/ui/tui.cpp
     src/model/tmux_session.cpp
     src/server/http_tcp_server.cpp
 )
