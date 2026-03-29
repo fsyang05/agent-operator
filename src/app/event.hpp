@@ -5,41 +5,27 @@
 #include <optional>
 #include <queue>
 #include <string>
-#include <variant>
 
-// TUI → App
+// TUI -> App
 enum class TUIEventType
 {
     CreateAgent,
     StartAgent,
     DeleteAgent,
     AttachAgent,
+    SendKeys,        // literal text via send-keys -l
+    SendSpecialKey,  // tmux key name via send-keys (e.g. "Enter", "BSpace")
     Quit
 };
 
 struct TUIEvent
 {
     TUIEventType type;
-    int selected_index;
+    int pane_id;
+    std::string keys;
 };
 
-// Server → App
-enum class ServerEventType
-{
-    Notification,
-    Stop,
-    UserPromptSubmit
-};
-
-struct ServerEvent
-{
-    ServerEventType type;
-    std::string session_id;
-};
-
-using AppEvent = std::variant<TUIEvent, ServerEvent>;
-
-// Simple SPSC queue (mutex + std::queue)
+// Thread-safe MPSC queue (mutex + std::queue)
 template<typename T>
 class EventQueue
 {
