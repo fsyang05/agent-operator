@@ -13,7 +13,7 @@ int main()
         App app;
 
         TUI tui(app.tui_queue());
-        app.set_tui(&tui);
+        app.set_tui(tui);
 
         while (true) {
             std::thread tui_thread([&tui] { tui.run(); });

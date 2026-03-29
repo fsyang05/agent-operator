@@ -220,6 +220,22 @@ Component TUI::build_app()
     auto pane_tree = build_component(bsp_root_.get());
 
     auto with_events = CatchEvent(pane_tree, [this](Event event) -> bool {
+        // Quit confirmation dialog: intercept all events
+        if (show_quit_dialog_) {
+            if (event == Event::Character('y') || event == Event::Character('Y')) {
+                event_queue_.push(TUIEvent{ TUIEventType::Quit, 0, {} });
+                screen_.Exit();
+                return true;
+            }
+            if (event == Event::Character('n') || event == Event::Character('N') ||
+                event == Event::Escape) {
+                show_quit_dialog_ = false;
+                return true;
+            }
+            if (event == Event::Custom) return false;  // allow re-renders
+            return true;  // swallow everything else
+        }
+
         // Insert mode: forward everything except Escape to tmux
         if (insert_mode_) {
             if (event == Event::Escape) {
@@ -272,7 +288,7 @@ Component TUI::build_app()
         return false;
     });
 
-    auto main_app = Renderer(with_events, [this, with_events] {
+    return Renderer(with_events, [this, with_events] {
         int n_panes = count_leaves(bsp_root_.get());
 
         Element status;
@@ -312,15 +328,13 @@ Component TUI::build_app()
             });
         }
 
-        return vbox({
+        auto base = vbox({
             with_events->Render() | flex,
             status,
         });
-    });
 
-    auto quit_dialog = CatchEvent(
-        Renderer([] {
-            return vbox({
+        if (show_quit_dialog_) {
+            auto dialog = vbox({
                 text(" Kill all agents and quit? ") | bold,
                 separator(),
                 hbox({
@@ -330,23 +344,11 @@ Component TUI::build_app()
                     text(":cancel "),
                 }),
             }) | border | clear_under | center;
-        }),
-        [this](Event event) -> bool {
-            if (event == Event::Character('y') || event == Event::Character('Y')) {
-                event_queue_.push(TUIEvent{ TUIEventType::Quit, 0, {} });
-                screen_.Exit();
-                return true;
-            }
-            if (event == Event::Character('n') || event == Event::Character('N') ||
-                event == Event::Escape) {
-                show_quit_dialog_ = false;
-                return true;
-            }
-            return true;  // swallow all events while dialog is shown
+            return dbox({ base, dialog });
         }
-    );
 
-    return Modal(main_app, quit_dialog, &show_quit_dialog_);
+        return base;
+    });
 }
 
 // --- Insert mode key forwarding ---------------------------------------------

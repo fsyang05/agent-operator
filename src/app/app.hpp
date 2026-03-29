@@ -26,7 +26,7 @@ public:
     void attach_agent(int pane_id);
     void reset_for_reentry() { running_ = true; }
 
-    void set_tui(TUI* tui) { tui_ = tui; }
+    void set_tui(TUI& tui) { tui_ = &tui; }
     EventQueue<TUIEvent>& tui_queue() { return tui_queue_; }
 
 private:
@@ -41,7 +41,7 @@ private:
     EventQueue<TUIEvent> tui_queue_;
     TUI* tui_ = nullptr;
 
-    void handle_tui_event(const TUIEvent& e);
+    void handle_tui_event(TUIEvent e);
 
     void create_agent(int pane_id);
     void delete_agent(int pane_id);

@@ -44,7 +44,7 @@ void App::run()
 
     while (running_) {
         while (auto ev = tui_queue_.try_pop()) {
-            handle_tui_event(*ev);
+            handle_tui_event(std::move(*ev));
             if (!running_) return;
         }
 
@@ -60,7 +60,7 @@ void App::run()
     }
 }
 
-void App::handle_tui_event(const TUIEvent& e)
+void App::handle_tui_event(TUIEvent e)
 {
     switch (e.type) {
         case TUIEventType::CreateAgent:
