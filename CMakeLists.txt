@@ -13,25 +13,27 @@ FetchContent_Declare(ftxui
 )
 FetchContent_MakeAvailable(ftxui)
 
-add_executable(run
+add_executable(agent-operator
     src/main.cpp
     src/app/app.cpp
     src/ui/tui.cpp
     src/model/tmux_session.cpp
 )
 
-target_include_directories(run PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(agent-operator PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-target_compile_options(run PRIVATE
+target_compile_options(agent-operator PRIVATE
     -Wall
     -Wextra
     -Wpedantic
 )
 
-target_compile_definitions(run PRIVATE ENABLE_DEBUG)
+target_compile_definitions(agent-operator PRIVATE ENABLE_DEBUG)
 
-target_link_libraries(run
+target_link_libraries(agent-operator
   PRIVATE ftxui::screen
   PRIVATE ftxui::dom
   PRIVATE ftxui::component
 )
+
+install(TARGETS agent-operator DESTINATION bin)
