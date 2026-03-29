@@ -20,10 +20,10 @@ This installs `agent-operator` to `~/.local/bin/`. Make sure `~/.local/bin` is i
 
 ## Keybindings
 
-| Key   | Action                        |
-|-------|-------------------------------|
-| `v`   | Split pane vertically         |
-| `h`   | Split pane horizontally       |
+| Key     | Action                        |
+|---------|-------------------------------|
+| `v`     | Split pane vertically         |
+| `s`     | Split pane horizontally       |
 | `d`   | Delete focused pane           |
 | `i`   | Enter insert mode (type into pane) |
 | `ESC` | Exit insert mode              |

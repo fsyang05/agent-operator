@@ -249,7 +249,7 @@ Component TUI::build_app()
             rebuild_();
             return true;
         }
-        if (event == Event::Character('h')) {
+        if (event == Event::Character('s')) {
             split_pane(SplitDir::HORIZONTAL);
             rebuild_();
             return true;
@@ -280,41 +280,8 @@ Component TUI::build_app()
     });
 
     return Renderer(with_events, [this, with_events] {
-        int n_panes = count_leaves(bsp_root_.get());
-
-        Element status;
-        if (insert_mode_) {
-            status = hbox({
-                text(" -- INSERT -- ") | bold | color(Color::Green),
-                filler(),
-                text(" ESC") | bold | color(Color::Cyan),
-                text(":normal  "),
-                text("Pane " + std::to_string(focused_id_) + "  ") | bold,
-                text(std::to_string(n_panes) + " panes ") | dim,
-            });
-        } else {
-            status = hbox({
-                text(" v") | bold | color(Color::Cyan),
-                text(":vsplit  "),
-                text("h") | bold | color(Color::Cyan),
-                text(":hsplit  "),
-                text("d") | bold | color(Color::Cyan),
-                text(":delete  "),
-                text("i") | bold | color(Color::Cyan),
-                text(":insert  "),
-                text("ret") | bold | color(Color::Cyan),
-                text(":attach  "),
-                text("q") | bold | color(Color::Cyan),
-                text(":quit  "),
-                filler(),
-                text("Pane " + std::to_string(focused_id_) + "  ") | bold,
-                text(std::to_string(n_panes) + " panes ") | dim,
-            });
-        }
-
         auto base = vbox({
             with_events->Render() | flex,
-            status,
         });
 
         if (show_quit_dialog_) {
