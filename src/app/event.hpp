@@ -10,7 +10,6 @@
 enum class TUIEventType
 {
     CreateAgent,
-    StartAgent,
     DeleteAgent,
     AttachAgent,
     SendKeys,        // literal text via send-keys -l

@@ -45,7 +45,6 @@ private:
 
     void create_agent(int pane_id);
     void delete_agent(int pane_id);
-    void start_agent(int pane_id);
     void send_keys_to_agent(int pane_id, const std::string& keys);
     void send_special_key_to_agent(int pane_id, const std::string& key_name);
 

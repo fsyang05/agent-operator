@@ -1,6 +1,5 @@
 #include "ui/tui.hpp"
 #include "ui/ansi_parser.hpp"
-#include "ui/components.hpp"
 
 using namespace ftxui;
 
@@ -83,7 +82,6 @@ void TUI::update(const std::map<int, std::unique_ptr<agent::Agent>>& agents)
         for (auto& [id, ag] : agents) {
             agent_views_[id] = AgentView{
                 ag->name(),
-                ag->agent_state(),
                 ag->preview(),
             };
         }
@@ -173,12 +171,9 @@ Component TUI::build_component(BspNode* node)
             auto it = agent_views_.find(id);
             if (it != agent_views_.end()) {
                 auto& av = it->second;
-                Color sc = state_to_color(av.state);
 
                 auto header = hbox({
                     text(av.name) | bold,
-                    text(" "),
-                    text(agent::state_to_str(av.state)) | color(sc) | bold,
                 });
 
                 auto body = ansi::ansi_to_element(av.preview) | flex;
@@ -249,12 +244,12 @@ Component TUI::build_app()
         }
 
         // Normal mode keybindings
-        if (event == Event::Character('n')) {
+        if (event == Event::Character('v')) {
             split_pane(SplitDir::VERTICAL);
             rebuild_();
             return true;
         }
-        if (event == Event::Character('N')) {
+        if (event == Event::Character('h')) {
             split_pane(SplitDir::HORIZONTAL);
             rebuild_();
             return true;
@@ -262,10 +257,6 @@ Component TUI::build_app()
         if (event == Event::Character('d')) {
             delete_pane();
             rebuild_();
-            return true;
-        }
-        if (event == Event::Character('s')) {
-            event_queue_.push(TUIEvent{ .type = TUIEventType::StartAgent, .pane_id = focused_id_, .keys = {} });
             return true;
         }
         if (event == Event::Character('i')) {
@@ -297,34 +288,27 @@ Component TUI::build_app()
                 text(" -- INSERT -- ") | bold | color(Color::Green),
                 filler(),
                 text(" ESC") | bold | color(Color::Cyan),
-                text(":normal "),
-                separatorLight(),
-                text(" Pane: " + std::to_string(focused_id_) + " ") | bold,
-                separatorLight(),
-                text(" " + std::to_string(n_panes) + " panes ") | dim,
+                text(":normal  "),
+                text("Pane " + std::to_string(focused_id_) + "  ") | bold,
+                text(std::to_string(n_panes) + " panes ") | dim,
             });
         } else {
             status = hbox({
-                text(" n") | bold | color(Color::Cyan),
-                text(":vsplit "),
-                text("N") | bold | color(Color::Cyan),
-                text(":hsplit "),
-                separatorLight(),
-                text(" s") | bold | color(Color::Cyan),
-                text(":start "),
-                text("d") | bold | color(Color::Red),
-                text(":kill "),
-                separatorLight(),
-                text(" i") | bold | color(Color::Green),
-                text(":insert "),
+                text(" v") | bold | color(Color::Cyan),
+                text(":vsplit  "),
+                text("h") | bold | color(Color::Cyan),
+                text(":hsplit  "),
+                text("d") | bold | color(Color::Cyan),
+                text(":delete  "),
+                text("i") | bold | color(Color::Cyan),
+                text(":insert  "),
                 text("ret") | bold | color(Color::Cyan),
-                text(":attach "),
-                text("q") | bold,
-                text(":quit "),
+                text(":attach  "),
+                text("q") | bold | color(Color::Cyan),
+                text(":quit  "),
                 filler(),
-                text(" Pane: " + std::to_string(focused_id_) + " ") | bold,
-                separatorLight(),
-                text(" " + std::to_string(n_panes) + " panes ") | dim,
+                text("Pane " + std::to_string(focused_id_) + "  ") | bold,
+                text(std::to_string(n_panes) + " panes ") | dim,
             });
         }
 

@@ -66,9 +66,6 @@ void App::handle_tui_event(TUIEvent e)
         case TUIEventType::CreateAgent:
             create_agent(e.pane_id);
             break;
-        case TUIEventType::StartAgent:
-            start_agent(e.pane_id);
-            break;
         case TUIEventType::DeleteAgent:
             delete_agent(e.pane_id);
             break;
@@ -107,19 +104,6 @@ void App::delete_agent(int pane_id)
     tmux_->kill_window(it->second->name());
     LOG("(APP) deleted agent", it->second->name(), "pane", pane_id);
     agents_.erase(it);
-}
-
-void App::start_agent(int pane_id)
-{
-    auto it = agents_.find(pane_id);
-    if (it == agents_.end()) return;
-
-    auto& ag = it->second;
-    if (ag->agent_state() != agent::AgentState::AGENT_IDLE) return;
-
-    tmux_->send_keys(ag->name(), "claude");
-    ag->change_state(agent::AgentState::AGENT_RUNNING);
-    LOG("(APP) started agent", ag->name(), "session", ag->session_id());
 }
 
 void App::send_keys_to_agent(int pane_id, const std::string& keys)

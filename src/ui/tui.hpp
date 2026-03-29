@@ -13,6 +13,7 @@
 #include "app/event.hpp"
 #include "model/agent.hpp"
 
+
 // BSP tree node for tiling pane layout
 enum class SplitDir { HORIZONTAL, VERTICAL };
 
@@ -60,7 +61,6 @@ private:
     struct AgentView
     {
         std::string name;
-        agent::AgentState state;
         std::string preview;
     };
 
