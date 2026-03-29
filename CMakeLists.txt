@@ -13,19 +13,11 @@ FetchContent_Declare(ftxui
 )
 FetchContent_MakeAvailable(ftxui)
 
-# nlohmann/json
-FetchContent_Declare(json
-  URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-)
-FetchContent_MakeAvailable(json)
-
 add_executable(run
     src/main.cpp
     src/app/app.cpp
-    src/app/router.cpp
     src/ui/tui.cpp
     src/model/tmux_session.cpp
-    src/server/http_tcp_server.cpp
 )
 
 target_include_directories(run PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -42,5 +34,4 @@ target_link_libraries(run
   PRIVATE ftxui::screen
   PRIVATE ftxui::dom
   PRIVATE ftxui::component
-  PRIVATE nlohmann_json::nlohmann_json
 )

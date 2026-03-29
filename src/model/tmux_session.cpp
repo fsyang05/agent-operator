@@ -48,6 +48,15 @@ TmuxSession::~TmuxSession()
 void TmuxSession::ensure_session()
 {
     if (initialized_) return;
+
+    // Kill any leftover session from a previous crash
+    std::string check = "tmux has-session -t " + shell_quote(session_name_) + " 2>/dev/null";
+    if (system(check.c_str()) == 0) {
+        LOG("(TMUX) killing leftover session", session_name_);
+        std::string kill = "tmux kill-session -t " + shell_quote(session_name_);
+        system(kill.c_str());
+    }
+
     // -d runs in background, doesn't immediately attach
     std::string cmd = "tmux new-session -d -s " + shell_quote(session_name_);
     int rc = system(cmd.c_str());
@@ -140,6 +149,26 @@ void TmuxSession::send_keys(const std::string& window_name, const std::string& k
     }
 
     LOG("(TMUX) sent keys to window", window_name);
+}
+
+void TmuxSession::send_keys_raw(const std::string& window_name, const std::string& keys)
+{
+    ensure_session();
+    if (!window_names_.count(window_name)) {
+        throw std::invalid_argument("No such window: " + window_name);
+    }
+    std::string cmd = "tmux send-keys -t " + shell_quote(session_name_ + ":" + window_name) + " -l " + shell_quote(keys);
+    system(cmd.c_str());
+}
+
+void TmuxSession::send_special_key(const std::string& window_name, const std::string& key_name)
+{
+    ensure_session();
+    if (!window_names_.count(window_name)) {
+        throw std::invalid_argument("No such window: " + window_name);
+    }
+    std::string cmd = "tmux send-keys -t " + shell_quote(session_name_ + ":" + window_name) + " " + key_name;
+    system(cmd.c_str());
 }
 
 std::vector<std::string> TmuxSession::list_windows() const

@@ -1,35 +1,62 @@
 #pragma once
 
+#include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <vector>
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/screen/box.hpp>
 
 #include "app/event.hpp"
 #include "model/agent.hpp"
+
+// BSP tree node for tiling pane layout
+enum class SplitDir { HORIZONTAL, VERTICAL };
+
+struct BspNode {
+    int id = 0;
+    SplitDir dir = SplitDir::VERTICAL;
+    int split_size = 0;
+    ftxui::Box last_box = {};
+    std::unique_ptr<BspNode> left;
+    std::unique_ptr<BspNode> right;
+
+    bool is_leaf() const { return !left && !right; }
+
+    static std::unique_ptr<BspNode> make_leaf(int leaf_id) {
+        auto n = std::make_unique<BspNode>();
+        n->id = leaf_id;
+        return n;
+    }
+
+    static bool is_leaf_with_id(const std::unique_ptr<BspNode>& child, int target) {
+        return child && child->is_leaf() && child->id == target;
+    }
+};
+
+// BSP tree helpers
+BspNode* find_node(BspNode* node, int id);
+BspNode* find_parent(BspNode* node, int target_id);
+int first_leaf_id(BspNode* node);
+int count_leaves(BspNode* node);
 
 class TUI
 {
 public:
     explicit TUI(EventQueue<TUIEvent>& queue);
 
-    // Blocks on FTXUI event loop.
     void run();
-
-    // Called by App after state change. Copies agent view data and triggers re-render.
-    void update(const std::vector<std::unique_ptr<agent::Agent>>& agents);
-
-    // Thread-safe: triggers FTXUI redraw.
+    void update(const std::map<int, std::unique_ptr<agent::Agent>>& agents);
     void post_event();
 
 private:
     EventQueue<TUIEvent>& event_queue_;
     ftxui::ScreenInteractive screen_;
 
-    // Local copy of agent state for rendering
+    // Agent view data (thread-safe copy from App)
     struct AgentView
     {
         std::string name;
@@ -38,12 +65,29 @@ private:
     };
 
     std::mutex render_mutex_;
-    std::vector<AgentView> agent_views_;
-    int selected_index_ = 0;
-    bool grid_mode_ = false;
+    std::map<int, AgentView> agent_views_;
 
-    ftxui::Component build_ui();
-    ftxui::Element render_normal_view();
-    ftxui::Element render_grid_view();
-    ftxui::Element render_help_bar();
+    // BSP tree state
+    std::unique_ptr<BspNode> bsp_root_;
+    int next_pane_id_ = 0;
+    int focused_id_ = -1;
+    bool insert_mode_ = false;
+    bool show_quit_dialog_ = false;
+
+    // FTXUI component state
+    ftxui::Component root_container_;
+    int tab_index_ = 0;
+    std::function<void()> rebuild_;
+    std::map<int, ftxui::Component> leaf_map_;
+
+    // Tree operations
+    void split_pane(SplitDir dir);
+    void delete_pane();
+
+    // Component building
+    ftxui::Component build_component(BspNode* node);
+    ftxui::Component build_app();
+
+    // Key forwarding for insert mode
+    void forward_event_to_agent(const ftxui::Event& event);
 };
